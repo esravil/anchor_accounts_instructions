@@ -42,17 +42,18 @@ pub mod test_accins {
 
         // dissimilar to the withdraws, since signer has to deposit, the pda seeds not needed here
 
-        let tx = anchor_lang::system_program::Transfer {
+        let accs = anchor_lang::system_program::Transfer {
 
             from: ctx.accounts.sender.to_account_info(),
             to: ctx.accounts.vault.to_account_info(),
 
         };
 
-        // time to sign
+        // time to do action + sign
+        // this is a CPI. We are invoking transfer program!
         anchor_lang::system_program::transfer(
 
-            CpiContext::new(ctx.accounts.system_program.to_account_info(), tx),
+            CpiContext::new(ctx.accounts.system_program.to_account_info(), accs), // program id + acounts for tx
             val,
 
         )?;
@@ -72,22 +73,24 @@ pub mod test_accins {
 
         let seeds: &[&[u8]] = &[b"vault", ctx.accounts.payer.key.as_ref(), &[ctx.bumps.vault]]; // the bump is provided by the ctx struct
         
-        let action = anchor_lang::system_program::Transfer {
+        // new instance of the transfer struct, the accs needed
+        let accs = anchor_lang::system_program::Transfer {
 
             from: ctx.accounts.vault.to_account_info(),
             to: ctx.accounts.receiver.to_account_info(),
 
         };
 
-        // need to call transfer associated function
+        // need to call transfer associated function for the action of transferring itself
+        // CPI
         anchor_lang::system_program::transfer(
 
             // new with signer used for tx needing to be signed by owning program
             CpiContext::new_with_signer(
 
                 ctx.accounts.system_program.to_account_info(), // we use the executable acc
-                action,
-                &[seeds],
+                accs,
+                &[seeds], // signer
 
             ),
             val
