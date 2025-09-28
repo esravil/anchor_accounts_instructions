@@ -66,36 +66,15 @@ pub mod test_accins {
 
         require!(val > 0, ErrorType::SubZero);
 
-        // to_account_info clones account entirely, expensive + on heap
-        let vault_lamports = ctx.accounts.vault.to_account_info().lamports();
+        let vault_ai = &mut ctx.accounts.vault.to_account_info();
+        let receiver_ai = &mut ctx.accounts.receiver.to_account_info();
 
+        let vault_lamports = vault_ai.lamports();
         require!(val <= vault_lamports, ErrorType::TooLarge);
 
-        let seeds: &[&[u8]] = &[b"vault", ctx.accounts.payer.key.as_ref(), &[ctx.bumps.vault]]; // the bump is provided by the ctx struct
-        
-        // new instance of the transfer struct, the accs needed
-        let accs = anchor_lang::system_program::Transfer {
-
-            from: ctx.accounts.vault.to_account_info(),
-            to: ctx.accounts.receiver.to_account_info(),
-
-        };
-
-        // need to call transfer associated function for the action of transferring itself
-        // CPI
-        anchor_lang::system_program::transfer(
-
-            // new with signer used for tx needing to be signed by owning program
-            CpiContext::new_with_signer(
-
-                ctx.accounts.system_program.to_account_info(), // we use the executable acc
-                accs,
-                &[seeds], // signer
-
-            ),
-            val
-
-        )?;
+        // safe because your program owns `vault` (Anchor enforces owner)
+        **vault_ai.try_borrow_mut_lamports()? -= val;
+        **receiver_ai.try_borrow_mut_lamports()? += val;
 
         Ok(())
     }
@@ -183,9 +162,9 @@ pub struct WithdrawContext<'info> {
     #[account(
 
         mut,
-        seeds = [b"vault".as_ref(), payer.key().as_ref()],
+        seeds = [b"vault".as_ref(), payer.key.as_ref()],
         bump
-
+ 
     )]
     pub vault: Account<'info, Vault>,
 

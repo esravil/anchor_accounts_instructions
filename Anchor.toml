@@ -4,6 +4,7 @@ package_manager = "yarn"
 [features]
 resolution = true
 skip-lint = false
+seeds = true
 
 [programs.localnet]
 test_accins = "HWGE5s5rZwNh1B2bKhMDUVVw2qfyv8B2h9EVpLCeKEZt"
